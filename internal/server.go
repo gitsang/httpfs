@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gitsang/httpfs/pkg/netx"
 )
@@ -30,8 +31,7 @@ func Serve(listen, dir string) {
 	}
 	logs = append(logs, slog.Group("visits", logG...))
 
-	http.Handle("/", http.FileServer(http.Dir(dir)))
-	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			file, header, err := r.FormFile("file")
 			if err != nil {
@@ -40,7 +40,7 @@ func Serve(listen, dir string) {
 			}
 			defer file.Close()
 
-			dst, err := os.Create(filepath.Join(dir, header.Filename))
+			dst, err := os.Create(filepath.Join(dir, r.URL.Path, header.Filename))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -52,13 +52,14 @@ func Serve(listen, dir string) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
-			w.Write([]byte("File uploaded successfully"))
-			return
 		}
 
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, uploadHtml)
+		if strings.HasSuffix(r.URL.Path, "/") {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, uploadHtml)
+		}
+
+		http.FileServer(http.Dir(dir)).ServeHTTP(w, r)
 	})
 
 	slog.Info("serving...", logs...)
