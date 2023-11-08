@@ -3,6 +3,7 @@ module github.com/gitsang/httpfs
 go 1.21.3
 
 require (
+	github.com/rodaine/table v1.1.0
 	github.com/spf13/cobra v1.7.0
 	gotest.tools/v3 v3.5.1
 )
